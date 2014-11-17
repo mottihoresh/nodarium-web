@@ -23,7 +23,7 @@ Articles.register(function(app, auth, database) {
     'link': 'all articles'
   });
   Articles.menus.add({
-    'roles': ['authenticated'],
+    'roles': ['admin'],
     'title': 'Create New Article',
     'link': 'create article'
   });

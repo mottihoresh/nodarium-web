@@ -6,6 +6,7 @@ module.exports = function(System, app, auth, database) {
 
   app.route('/admin/menu/:name')
     .get(function(req, res) {
+
       var roles = req.user ? req.user.roles : ['anonymous'];
       var menu = req.params.name || 'main';
       var defaultMenu = req.query.defaultMenu || [];
