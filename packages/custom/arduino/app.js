@@ -75,10 +75,13 @@ Arduino.register(function (app, auth, database, socketio) {
 
     setInterval(function () {
         Arduino.addTask(faker.name.firstName() + ' ' + faker.name.lastName(), faker.hacker.phrase());
-
-
     }, 15000);
 
+    setInterval(function(){
+        ArduinoCommandController.clear_expired(null,null,function(data){
+            console.log('cleared data: ',data);
+        });
+    }, 60000);
 
     var processCommandsQue = function () {
         setTimeout(function () {
