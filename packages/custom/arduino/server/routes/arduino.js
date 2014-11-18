@@ -7,6 +7,7 @@ module.exports = function (Arduino, app, auth, database) {
 
     app.get('/arduino/example/anyone', arduinoCommands.create);
     app.get('/arduino/next_command', arduinoCommands.getNext);
+    app.get('/arduino/clear_expired', arduinoCommands.clear_expired);
 
 
     app.get('/arduino/example/auth', auth.requiresLogin, function (req, res, next) {

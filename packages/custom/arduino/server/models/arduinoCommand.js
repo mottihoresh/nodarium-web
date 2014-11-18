@@ -1,6 +1,7 @@
 'use strict';
 
 var mongoose = require('mongoose'),
+    moment = require('moment'),
     Schema = mongoose.Schema;
 
 var ArduinoCommandSchema = new Schema({
@@ -36,8 +37,17 @@ var ArduinoCommandSchema = new Schema({
 
 });
 
-ArduinoCommandSchema.statics.clearOldCompletedTasks = function(){
-
+/**
+ * Remove all tasks that are complete and that are over 45 minutes old.
+ * @param cb call back function.
+ */
+ArduinoCommandSchema.statics.clearOldCompletedTasks = function(cb) {
+    this
+        .remove()
+        .where('completed').equals('true')
+        .where('created').lte(moment().subtract(45, 'minutes'))
+        .exec(cb);
 };
+
 
 mongoose.model('ArduinoCommand', ArduinoCommandSchema);

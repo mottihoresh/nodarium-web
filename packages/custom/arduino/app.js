@@ -8,12 +8,11 @@ var Module = require('meanio').Module;
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
 
-var S = require('string');
+
+//var S = require('string');
 var faker = require('faker');  // Used for testing
 
 var serialport = require('serialport');
-
-var moment = require('moment');
 
 var Arduino = new Module('arduino');
 
@@ -23,61 +22,192 @@ var Arduino = new Module('arduino');
  */
 Arduino.register(function (app, auth, database, socketio) {
 
-    console.log('moment time: ',typeof(moment().subtract(10, 'days')));
-    console.log('testing here..', moment().format());
+    // get arduino command controller
+    var ArduinoCommandController = require('./server/controllers/arduinoCommandController');
 
 
+    Arduino.connected = false;
+    Arduino.transmiting = false;
+
+    // Setup serial connection, but don't open it yet.
     var SerialPort = serialport.SerialPort,
         serialPort = new SerialPort('/dev/cu.usbmodem1411', {
             baudrate: 57600,
             parser: serialport.parsers.readline('\n')
         }, false); // this is the openImmediately flag [default is true]
 
+
+    // private function that attempts to connect to the defined serial
+    // connection.
     var openSerialConnection = function () {
 
         console.log('Attempting to connect to Arduino');
 
         serialPort.open(function (err) {
-            if (err) {
-                console.log(err);
+            if (!err) {
+
+                console.log('connected to Arduino controller');
+
             }
+
         });
     };
 
 
-    serialPort
-        .on('connection', function () {
-            console.log('connected');
-        })
-        .on('data', function (data) {
-            console.log('incoming data: :', S(data).trim().s);
-            console.log('data length: ', S(data).trim().s.length);
-            console.log('------------------');
-        })
-        .on('error', function (error) {
-            console.log('error: ', error);
-        });
-
-
-// testing
-    setInterval(function () {
-        serialPort.write(faker.finance.accountName() + '\n', function (err) {
-            if (err) {
-                eventEmitter.emit('test-event', err);
-            }
-        });
-    }, 10000);
-
     eventEmitter.on('test-event', function (err) {
-        openSerialConnection();
-        console.log('trigger event', err);
+        if (!Arduino.connected) {
+            openSerialConnection();
+        } else {
+            console.log('This console log should never fire..., if it does it means there are zombies walking around the streets of Washington D.C.');
+        }
+
+
     });
 
 
+    Arduino.addTask = function (type, command) {
+        ArduinoCommandController.create_task({
+            type: type,
+            command: command
 
-    Arduino.addTask = function () {
-        console.log('task added!');
+        });
     };
+
+    setInterval(function () {
+        Arduino.addTask(faker.name.firstName() + ' ' + faker.name.lastName(), faker.hacker.phrase());
+
+
+    }, 15000);
+
+
+    var processCommandsQue = function () {
+        setTimeout(function () {
+
+            // ust be connected in order to process que.
+            if (Arduino.connected && !Arduino.transmiting) {
+                // get next request
+                var next_command;
+                ArduinoCommandController.get_next(function (err, data) {
+                    next_command = data;
+                    if (data && data._id) {
+                        // increase attempts count
+                        ArduinoCommandController.attempt(next_command._id, function (err, data) {
+                            if (data && data.attempts > 20) {
+                                // if there are more then 20 attempts, break.
+                                console.log('!!!!!!!!!!!!!!FAIL!!!!!!!!!!!!!!!!!!!!!!');
+                                ArduinoCommandController.mark_complete(next_command._id, function () {
+                                });
+                            }
+                        });
+
+                        // send to arduino
+                        var command_obj = {
+                            type: data.type,
+                            command: data.command,
+                            id: data._id,
+                        };
+
+                        Arduino.transmiting = true;
+
+                        serialPort.write(JSON.stringify(command_obj) + '\n', function (err) {
+                            serialPort.drain(function (err) {
+                                if (err) {
+                                    eventEmitter.emit('test-event', err);
+                                }
+
+                            });
+
+                        });
+
+                    }
+
+                });
+            } else {
+                processCommandsQue();
+            }
+
+
+        }, 1);
+    };
+
+    var initializeSerialPortEventListeners = function () {
+        // need to refactor and move to routes file.
+        serialPort
+            .on('open', function () {
+                eventEmitter.emit('arduino.connected');
+                console.log('connected, connection opened!');
+            })
+            .on('data', function (data, err) {
+
+
+                ArduinoCommandController.process_command(data, function () {
+                    Arduino.transmiting = false;
+                    processCommandsQue();
+                });
+            })
+            .on('error', function (error) {
+                console.log('error: ', error);
+
+            })
+            .on('close', function (error) {
+                console.log('connection closed');
+
+                eventEmitter.emit('arduino.disconnected');
+
+                (function connectToArduino() {
+
+                    setTimeout(function () {
+
+                        connectToArduino();
+
+                        if (!Arduino.connected) {
+                            openSerialConnection();
+                        }
+
+                    }, 1000);
+                })();
+
+            });
+
+    };
+
+    eventEmitter.on('arduino.disconnected', function () {
+        Arduino.connected = false;
+        Arduino.transmiting = false;
+        setTimeout(initializeSerialPortEventListeners, 100);
+        console.log('connection lost, trying to re-set serial port listeners');
+    })
+        .on('arduino.connected', function () {
+
+            serialPort.flush(function () {
+                serialPort.drain(function () {
+
+                    setTimeout(function(){
+                        Arduino.connected = true;
+                    },1000);
+
+                });
+            });
+
+
+        });
+
+    initializeSerialPortEventListeners();
+    (function connectToArduino() {
+
+        setTimeout(function () {
+
+
+            if (!Arduino.connected) {
+                openSerialConnection();
+                connectToArduino();
+            }
+
+        }, 5000);
+    })();
+
+
+
 
     //We enable routing. By default the Package Object is passed to the routes
     Arduino.routes(app, auth, database);
@@ -134,9 +264,8 @@ Arduino.register(function (app, auth, database, socketio) {
 
     Arduino.settings(function (err, settings) {
         //you now have the settings object
-        console.log(settings);
     });
 
-
+    processCommandsQue();
     return Arduino;
 });
