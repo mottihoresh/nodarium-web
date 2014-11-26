@@ -1,3 +1,3 @@
 'use strict';
 
-angular.module('mean.arduino', []);
+angular.module('mean.arduino', ['luegg.directives']);

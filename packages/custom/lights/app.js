@@ -11,10 +11,10 @@ var Lights = new Module('lights');
  * All MEAN packages require registration
  * Dependency injection is used to define required modules
  */
-Lights.register(function(app, auth, database, arduino, socketio) {
+Lights.register(function(app, auth, database, arduino, socket) {
 
   //We enable routing. By default the Package Object is passed to the routes
-  Lights.routes(app, auth, database,arduino, socketio);
+  Lights.routes(app, auth, database,arduino, socket.io);
 
   //We are adding a link to the main menu for all authenticated users
   Lights.menus.add({

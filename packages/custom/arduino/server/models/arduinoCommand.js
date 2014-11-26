@@ -38,14 +38,14 @@ var ArduinoCommandSchema = new Schema({
 });
 
 /**
- * Remove all tasks that are complete and that are over 45 minutes old.
+ * Remove all tasks that are complete and that are over 5 minutes old.
  * @param cb call back function.
  */
 ArduinoCommandSchema.statics.clearOldCompletedTasks = function(cb) {
     this
         .remove()
-        .where('completed').equals('true')
-        .where('created').lte(moment().subtract(45, 'minutes'))
+        //.where('completed').equals('true')
+        .where('created').lte(moment().subtract(5, 'minutes'))
         .exec(cb);
 };
 

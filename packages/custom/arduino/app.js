@@ -4,68 +4,223 @@
  * Defining the Package
  */
 var Module = require('meanio').Module;
-
-var events = require('events');
-var eventEmitter = new events.EventEmitter();
-
-
-//var S = require('string');
-var faker = require('faker');  // Used for testing
-
-var serialport = require('serialport');
-
 var Arduino = new Module('arduino');
+
+var ArduinoCommandController = require('./server/controllers/arduinoCommandController');
+
+var eventEmitter = require('meanio').events;
+
+// Serialport modules
+var serialport = require('serialport');
+var SerialPort = serialport.SerialPort;
+
 
 /*
  * All MEAN packages require registration
  * Dependency injection is used to define required modules
  */
-Arduino.register(function (app, auth, database, socketio) {
+Arduino.register(function (app, auth, database, socket) {
 
-    // get arduino command controller
-    var ArduinoCommandController = require('./server/controllers/arduinoCommandController');
+    Arduino.on = eventEmitter.on;
+    Arduino.emit = eventEmitter.emit;
+    Arduino.status = {
+        'connected': false,
+        'ready': false,
+        'connectionAttempts': 0,
+        'transmittingData': false
+    };
+    Arduino.Serial = null;
 
-
-    Arduino.connected = false;
-    Arduino.transmiting = false;
-
-    // Setup serial connection, but don't open it yet.
-    var SerialPort = serialport.SerialPort,
-        serialPort = new SerialPort('/dev/cu.usbmodem1411', {
+    Arduino.connect = function () {
+        Arduino.Serial = new SerialPort('/dev/cu.usbmodem1411', {
             baudrate: 57600,
+            disconnectedCallback: Arduino.reconnect,
+
             parser: serialport.parsers.readline('\n')
         }, false); // this is the openImmediately flag [default is true]
 
+        Arduino.Serial
+            .on('open', function (data) {
+                Arduino.emit('arduino.connected');
+            })
 
-    // private function that attempts to connect to the defined serial
-    // connection.
-    var openSerialConnection = function () {
+            .on('close', function () {
+                Arduino.emit('arduino.disconnected');
 
-        console.log('Attempting to connect to Arduino');
+                Arduino.status.connected = false;
+                Arduino.status.ready = false;
+                Arduino.status.transmittingData = false;
 
-        serialPort.open(function (err) {
-            if (!err) {
+                // Even tho the connection is closed, we still need to fire
+                // back the processTasks function, so we can check when
+                // the connection is available agian so we can continue
+                // sending data again.
+                Arduino.processTasks();
+            })
 
-                console.log('connected to Arduino controller');
+            .on('data', function (data) {
+                Arduino.ProcessIncomingCommand(data);
+                Arduino.emit('arduino.data.receive', data);
+            })
 
-            }
+            .on('error', function (err) {
+                console.log('arduino error... not sure what to do now...', err);
+            });
 
+        // going to try to connect to arduino
+        (function connectToArduino() {
+            Arduino.status.connectionAttempts += 1;
+            Arduino.emit('arduino.connecting');
+            setTimeout(function () {
+                Arduino.Serial.open(function (err) {
+                    if (!err) {
+                        Arduino.status.connected = true;
+                        Arduino.status.connectionAttempts = 0;
+
+                        // Once we have connection, we need to hand shake with the arduino
+                        // handshake is done by sending data for the arduino, and waiting
+                        // for it to come back in tact.
+
+                        (function shakeHands() {
+                            setTimeout(function () {
+                                // Send handshake command type.
+
+                                if (Arduino.status.connected && !Arduino.status.ready) {
+                                    Arduino.sendData({'type': 'handshake'});
+                                    shakeHands();
+                                }
+                            }, 1000);
+                        })();
+
+                    } else {
+                        //console.log('unable to connect ', err);
+                        connectToArduino();
+                    }
+                });
+            }, 1000);
+        })();
+
+    };
+
+    Arduino.reconnect = function () {
+
+        Arduino.Serial.close(function () {
+            Arduino.connect();
         });
     };
 
+    Arduino.disconnect = function () {
+    };
 
-    eventEmitter.on('test-event', function (err) {
-        if (!Arduino.connected) {
-            openSerialConnection();
-        } else {
-            console.log('This console log should never fire..., if it does it means there are zombies walking around the streets of Washington D.C.');
+    Arduino.sendData = function (data, callback) {
+        Arduino.emit('arduino.data.send', data);
+        Arduino.Serial.write(JSON.stringify(data) + '\n', callback);
+    };
+    Arduino.ProcessIncomingCommand = function (data) {
+        var command;
+        try {
+            command = JSON.parse(data);
+        } catch (e) {
+            console.log('Arduino: Unable to process incoming command', e, data);
+            return;
         }
 
+        if (command.status === 'OK' && command.type === 'handshake') {
+            Arduino.emit('arduino.ready');
+            Arduino.status.ready = true;
 
-    });
+            // we are all set, connected and ready
+            // lets start processing pending tasks.
+            Arduino.processTasks();
+            return;
+        }
+        // command recieved!!! yay!!!
+        if (command.status === 'OK') {
 
 
+            switch (command.type) {
+
+                case 'confirm':
+                    console.log('Confirmed recieved command');
+                    Arduino.emit('arduino.tasks.completed');
+                    ArduinoCommandController.mark_complete(command.id);
+                    break;
+
+                case 'light':
+                    console.log('light command');
+                    break;
+
+                case 'pump':
+                    console.log('pump command');
+                    break;
+
+                case 'sensor':
+                    console.log('sensor command');
+                    break;
+
+                case 'outlet':
+                    console.log('outlet command');
+                    break;
+
+            }
+
+            // We've recieved some data that is not handshake, we can
+            // process pending tasks.
+
+        }
+
+        else {
+            console.log('Communication Error: ' + command.message);
+        }
+
+        Arduino.status.transmittingData = false;
+        Arduino.processTasks();
+
+    };
+
+    Arduino.processTasks = function () {
+
+        // If connected, ready, and not transmitting
+
+        // If the arduino is busy, not connected or not ready, run callback.
+        if (!Arduino.status.connected || !Arduino.status.ready ||
+            Arduino.status.transmittingData) {
+
+            // Setting a large timeout, equaling at least to the time it take
+            // the arduino to connect.
+            setTimeout(Arduino.processTasks, 1000);
+            return;
+        }
+
+        // Arduino is ready to submit a command, if there is one pending.
+        ArduinoCommandController.get_next(function (err, data) {
+
+            // No available tasks... wait a little before trying again
+            // or something went wrong with the quest...
+            if (!data || err) {
+                setTimeout(Arduino.processTasks, 1000);
+                return;
+            }
+
+            // We are ready to send the data. need to setup a flag.
+            Arduino.status.transmittingData = true;
+
+            ArduinoCommandController.attempt(data._id,function(){
+                Arduino.emit('arduino.tasks.attempted');
+                Arduino.sendData({
+                    'type': data.type,
+                    'command': data.command,
+                    'id': data._id
+                });
+            });
+
+            //console.log(err,data);
+        });
+
+
+    };
     Arduino.addTask = function (type, command) {
+        Arduino.emit('arduino.tasks.created');
         ArduinoCommandController.create_task({
             type: type,
             command: command
@@ -73,147 +228,16 @@ Arduino.register(function (app, auth, database, socketio) {
         });
     };
 
-    setInterval(function () {
-        Arduino.addTask(faker.name.firstName() + ' ' + faker.name.lastName(), faker.hacker.phrase());
-    }, 15000);
-
-    setInterval(function(){
-        ArduinoCommandController.clear_expired(null,null,function(data){
-            console.log('cleared data: ',data);
-        });
-    }, 60000);
-
-    var processCommandsQue = function () {
+    (function createTask() {
         setTimeout(function () {
-
-            // ust be connected in order to process que.
-            if (Arduino.connected && !Arduino.transmiting) {
-                // get next request
-                var next_command;
-                ArduinoCommandController.get_next(function (err, data) {
-                    next_command = data;
-                    if (data && data._id) {
-                        // increase attempts count
-                        ArduinoCommandController.attempt(next_command._id, function (err, data) {
-                            if (data && data.attempts > 20) {
-                                // if there are more then 20 attempts, break.
-                                console.log('!!!!!!!!!!!!!!FAIL!!!!!!!!!!!!!!!!!!!!!!');
-                                ArduinoCommandController.mark_complete(next_command._id, function () {
-                                });
-                            }
-                        });
-
-                        // send to arduino
-                        var command_obj = {
-                            type: data.type,
-                            command: data.command,
-                            id: data._id,
-                        };
-
-                        Arduino.transmiting = true;
-
-                        serialPort.write(JSON.stringify(command_obj) + '\n', function (err) {
-                            serialPort.drain(function (err) {
-                                if (err) {
-                                    eventEmitter.emit('test-event', err);
-                                }
-
-                            });
-
-                        });
-
-                    }
-
-                });
-            } else {
-                processCommandsQue();
-            }
-
-
-        }, 1);
-    };
-
-    var initializeSerialPortEventListeners = function () {
-        // need to refactor and move to routes file.
-        serialPort
-            .on('open', function () {
-                eventEmitter.emit('arduino.connected');
-                console.log('connected, connection opened!');
-            })
-            .on('data', function (data, err) {
-
-
-                ArduinoCommandController.process_command(data, function () {
-                    Arduino.transmiting = false;
-                    processCommandsQue();
-                });
-            })
-            .on('error', function (error) {
-                console.log('error: ', error);
-
-            })
-            .on('close', function (error) {
-                console.log('connection closed');
-
-                eventEmitter.emit('arduino.disconnected');
-
-                (function connectToArduino() {
-
-                    setTimeout(function () {
-
-                        connectToArduino();
-
-                        if (!Arduino.connected) {
-                            openSerialConnection();
-                        }
-
-                    }, 1000);
-                })();
-
-            });
-
-    };
-
-    eventEmitter.on('arduino.disconnected', function () {
-        Arduino.connected = false;
-        Arduino.transmiting = false;
-        setTimeout(initializeSerialPortEventListeners, 100);
-        console.log('connection lost, trying to re-set serial port listeners');
-    })
-        .on('arduino.connected', function () {
-
-            serialPort.flush(function () {
-                serialPort.drain(function () {
-
-                    setTimeout(function(){
-                        Arduino.connected = true;
-                    },1000);
-
-                });
-            });
-
-
-        });
-
-    initializeSerialPortEventListeners();
-    (function connectToArduino() {
-
-        setTimeout(function () {
-
-
-            if (!Arduino.connected) {
-                openSerialConnection();
-                connectToArduino();
-            }
-
-        }, 5000);
+            Arduino.addTask('hippie', 'ho');
+            createTask();
+        }, Math.random() * 10000);
     })();
 
 
-
-
     //We enable routing. By default the Package Object is passed to the routes
-    Arduino.routes(app, auth, database);
+    Arduino.routes(app, auth, database, socket.io);
 
     //We are adding a link to the main menu for all authenticated users
     // normal item
@@ -269,6 +293,13 @@ Arduino.register(function (app, auth, database, socketio) {
         //you now have the settings object
     });
 
-    processCommandsQue();
+
+    Arduino.aggregateAsset('js', '../lib/angularjs-scroll-glue-Luegg/src/scrollglue.js', {
+        absolute: false,
+        global: true
+    });
+
+    Arduino.connect();
+
     return Arduino;
 });

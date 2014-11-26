@@ -1,3 +1,28 @@
 .arduino-example h1 {
   background-color: purple
 }
+
+
+.serial-monitor-console {
+    height:400px;
+    background: black;
+    color:#708090;
+    font-family: monospace, monospace;
+    font-size: 14px;
+    overflow: hidden;
+    overflow-y: auto;
+}
+
+.serial-monitor-console ul ,
+.serial-monitor-console li {
+    list-style: none;
+    margin: 0 0 0 5px;
+    padding: 0;
+}
+
+.serial-monitor-console .to-arduino {
+    color:#FF1493;
+}
+.serial-monitor-console .from-arduino {
+    color:#FFA500;
+}

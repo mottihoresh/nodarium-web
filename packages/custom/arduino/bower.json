@@ -1,5 +1,7 @@
 {
   "name": "arduino",
   "version": "0.0.1",
-  "dependencies": {}
+  "dependencies": {
+    "angularjs-scroll-glue-Luegg": "~2.0.3"
+  }
 }
