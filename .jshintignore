@@ -1,1 +1,6 @@
 test/coverage/**
+packages/custom/socket/**/**
+
+packages/custom/arduino/public/assets/lib/**/**
+packages/custom/article/public/assets/lib/**/**
+packages/articles/bower_components/**/**

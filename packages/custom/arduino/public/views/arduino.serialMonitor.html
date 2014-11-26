@@ -1,3 +1,17 @@
 <div>
-    <h2>Arduino Settings</h2>
+    <h2>Serial Monitor</h2>
+</div>
+<div data-ng-controller="ArduinoSerialMonitorController">
+
+    <div scroll-glue="glued" class="serial-monitor-console">
+        <ul>
+            <li ng-repeat="item in items">
+                <span class="{{item.direction}}-arduino">[ {{item.date | date: 'medium'}} > {{item.direction }} Arduino ] </span> :&#09;
+                {{item.data}}
+            </li>
+        </ul>
+    </div>
+    <p>
+        <button ng-click="glued = !glued">Toggle glued ({{glued}})</button>
+    </p>
 </div>

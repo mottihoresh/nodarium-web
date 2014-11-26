@@ -1,5 +1,7 @@
 'use strict';
 
+var eventEmitter = require('meanio').events;
+
 var mongoose = require('mongoose'),
     ArduinoCommand = mongoose.model('ArduinoCommand');
 
@@ -26,6 +28,12 @@ var taskController = function () {
             .findOneAndUpdate({'completed': true})
             .where('_id').equals(id)
             .exec(cb);
+    };
+
+    this.total_tasks = function (cb) {
+        ArduinoCommand.count({completed: false}, function (err,count) {
+            cb(err,count);
+        });
     };
 
     this.attempt = function (id, cb) {
@@ -62,10 +70,24 @@ var taskController = function () {
             });
     };
 
+    this.pendingTasks = function(req, res) {
+        ArduinoCommand
+            .find()
+            .where('completed').equals(false)
+            .sort('created')
+            .exec(function (err, data) {
+                res.json(data);
+            });
+    };
 
-    this.clear_expired = function (req, res) {
+    this.clear_expired = function (req, res, cb) {
         ArduinoCommand.clearOldCompletedTasks(function (err, data) {
-            res.json(data);
+            if (res) {
+                res.json(data);
+            } else {
+                cb(data);
+            }
+
         });
 
     };
@@ -92,11 +114,9 @@ var taskController = function () {
             // request was sent successfuly to the device.
             if (data && data.id) {
                 self.mark_complete(data.id);
+                eventEmitter.emit('arduino.tasks.completed');
                 console.log(data.id + ' has been processed succssfully');
-        }
-
-
-
+            }
 
 
         } catch (e) {
