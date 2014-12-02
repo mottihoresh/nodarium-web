@@ -25,6 +25,8 @@ Lights.register(function(app, auth, database, arduino, socket) {
   });
   
   Lights.aggregateAsset('css', 'lights.css');
+  Lights.aggregateAsset('css', 'color-mixer.css');
+
 
   /**
     //Uncomment to use. Requires meanio@0.3.7 or above

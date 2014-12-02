@@ -8,15 +8,30 @@ angular.module('mean.lights').controller('LightsController', ['$scope', 'Global'
     };
 
 
+      $scope.slider = {
+          'options': {
 
-      MeanSocket.on('connect', function(){
-          console.log('test connection');
 
-      });
+              orientation: 'vertical', range: 'min',
+              start: function (event, ui) {
+                  console.info('Slider start');
+              },
+              stop: function (event, ui) {
+                  console.info('Slider stop');
+              }
+          }
+      };
 
-      setInterval(function(){
-          console.log('trying to send something back');
-          MeanSocket.emit('test-light', {});
-      }, 1000);
+
+      console.log('Lights Controller');
+      //MeanSocket.on('connect', function(){
+      //    console.log('test connection');
+      //
+      //});
+      //
+      //setInterval(function(){
+      //    console.log('trying to send something back');
+      //    MeanSocket.emit('test-light', {});
+      //}, 1000);
   }
 ]);

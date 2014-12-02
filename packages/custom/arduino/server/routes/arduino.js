@@ -52,7 +52,7 @@ module.exports = function (Arduino, app, auth, database, io) {
 
 
     app.get('/arduino/status', auth.requiresAdmin, function (req, res, next) {
-        res.send(Arduino.connected);
+        res.send(Arduino.status.connected);
     });
 
     app.get('/arduino/tasks', auth.requiresAdmin, arduinoCommands.pendingTasks);
