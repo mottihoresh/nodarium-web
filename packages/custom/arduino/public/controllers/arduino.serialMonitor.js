@@ -3,7 +3,6 @@
 angular.module('mean.arduino').controller('ArduinoSerialMonitorController', ['$scope', 'Global', 'Arduino', 'MeanSocket', '$timeout',
     function ($scope, Global, Arduino, MeanSocket, $timeout) {
 
-        console.log('test');
 
         $scope.items = [];
         $scope.glued = true;

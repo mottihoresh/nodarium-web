@@ -64,7 +64,7 @@ Arduino.register(function (app, auth, database, socket) {
             })
 
             .on('error', function (err) {
-                console.log('arduino error... not sure what to do now...', err);
+                throw('Unknown Arduino Error: '+err);
             });
 
         // going to try to connect to arduino
@@ -93,7 +93,6 @@ Arduino.register(function (app, auth, database, socket) {
                         })();
 
                     } else {
-                        //console.log('unable to connect ', err);
                         connectToArduino();
                     }
                 });
@@ -121,7 +120,7 @@ Arduino.register(function (app, auth, database, socket) {
         try {
             command = JSON.parse(data);
         } catch (e) {
-            console.log('Arduino: Unable to process incoming command', e, data);
+            //console.log('Arduino: Unable to process incoming command', e, data);
             return;
         }
 
@@ -141,25 +140,25 @@ Arduino.register(function (app, auth, database, socket) {
             switch (command.type) {
 
                 case 'confirm':
-                    console.log('Confirmed recieved command');
+                    //console.log('Confirmed recieved command');
                     Arduino.emit('arduino.tasks.completed');
                     ArduinoCommandController.mark_complete(command.id);
                     break;
 
                 case 'light':
-                    console.log('light command');
+                    Arduino.emit('Arduino.command.incoming.light');
                     break;
 
                 case 'pump':
-                    console.log('pump command');
+                    Arduino.emit('Arduino.command.incoming.pump');
                     break;
 
                 case 'sensor':
-                    console.log('sensor command');
+                    Arduino.emit('Arduino.command.incoming.sensor');
                     break;
 
                 case 'outlet':
-                    console.log('outlet command');
+                    Arduino.emit('Arduino.command.incoming.outlet');
                     break;
 
             }
@@ -169,9 +168,8 @@ Arduino.register(function (app, auth, database, socket) {
 
         }
 
-        else {
-            console.log('Communication Error: ' + command.message);
-        }
+        // Communication error.
+        // Else block can come here...
 
         Arduino.status.transmittingData = false;
         Arduino.processTasks();

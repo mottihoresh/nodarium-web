@@ -24,8 +24,6 @@ angular.module('mean.arduino').controller('ArduinoController', ['$scope', 'Globa
 
                 $scope.pendingTasks = data.tasks;
 
-            } else {
-                console.log('no');
             }
         });
 
@@ -65,7 +63,6 @@ angular.module('mean.arduino').controller('ArduinoController', ['$scope', 'Globa
 
 
         MeanSocket.on('arduino.tasks.attempted', function () {
-            console.log('arduino.tasks.attempted');
             Arduino.getPendingTasks(function (data) {
                 if (data.success) {
 
@@ -75,7 +72,6 @@ angular.module('mean.arduino').controller('ArduinoController', ['$scope', 'Globa
             });
         });
         MeanSocket.on('arduino.tasks.completed', function () {
-            console.log('arduino.tasks.completed');
             Arduino.getPendingTasks(function (data) {
                 if (data.success) {
 
