@@ -1,13 +1,12 @@
-<div class="" data-ng-controller="LightsDemoController">
+<div class="lights-demo" data-ng-controller="LightsDemoController">
     <div class="row">
-        <div id="settings" class="col-sm-4">
+        <div id="settings" class="side-bar col-sm-4">
 
             <div class="aquarium-selector">
-                <h3>Select Aquarium:</h3>
+                <h3>Select Fixture/Group:</h3>
 
-                <p>Selected: {{country.selected}}</p>
                 <ui-select ng-model="country.selected" ng-disabled="disabled" style="width: 100;">
-                    <ui-select-match placeholder="Select or search a country in the list...">{{$select.selected.name}}</ui-select-match>
+                    <ui-select-match placeholder="Select a fixture or fixtures group from the list...">{{$select.selected.name}}</ui-select-match>
                     <ui-select-choices repeat="country in countries | filter: $select.search">
                         <span ng-bind-html="country.name | highlight: $select.search"></span>
                         <small  ng-bind-html="country.code | highlight: $select.search"></small>
@@ -19,7 +18,7 @@
 
 
         <div id="camera" class="light-camera-wrapper col-sm-8">
-            <img src="http://lorempixel.com/output/animals-q-c-640-480-3.jpg"
+            <img src="http://lorempixel.com/500/400/nature/"
                  alt=""/>
         </div>
     </div>

@@ -5,3 +5,12 @@
 .light-camera-wrapper img {
     width:100%;
 }
+
+.lights .side-bar {
+
+    /*background-image: url('http://lorempixel.com/500/400/nature/');*/
+    background-repeat: no-repeat;
+    background-position: bottom center;
+    background-size: contain;
+    min-height: 600px;
+}

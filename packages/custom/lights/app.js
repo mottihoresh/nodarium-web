@@ -26,6 +26,7 @@ Lights.register(function(app, auth, database, arduino, socket) {
   
   Lights.aggregateAsset('css', 'lights.css');
   Lights.aggregateAsset('css', 'color-mixer.css');
+  Lights.aggregateAsset('css', 'fixtures.css');
 
 
   /**

@@ -1,0 +1,59 @@
+<div data-ng-controller="LightsNewFixtureController">
+    <h2>Create new fixture</h2>
+{{ newFixture }}
+    <form role="form">
+        <div class="form-group">
+            <label for="exampleInputEmail1">Fixture Name</label>
+            <input type="text" class="form-control" id="exampleInputEmail1" data-ng-model="newFixture.name"
+                   placeholder="Enter email">
+
+            <p class="help-block">A <strong>Fixture</strong> is defined as one
+                or more led channels that are connected to the same PWM pin</p>
+        </div>
+        <div class="form-group">
+            <label for="exampleInputPassword1">Fixture Type</label>
+            <ui-select ng-model="newFixture.type"
+                       ng-disabled="disabled"
+                       style="width: 100;">
+                <ui-select-match
+                        placeholder="Select a fixture type from the list...">
+                    {{$select.selected.name}}
+                </ui-select-match>
+                <ui-select-choices
+                        repeat="fixture in fixtureTypes | filter: $select.search">
+                    <span ng-bind-html="fixture.name | highlight: $select.search"></span>
+                    <br>
+                    <small ng-bind-html="fixture.desc"></small>
+                </ui-select-choices>
+            </ui-select>
+        </div>
+
+        <div>
+            <fieldset class="form-horizontal">
+                <legend>Channel Mappings</legend>
+                <p class="help-block"
+                   data-ng-show="!!!newFixture.type.channels.length">Select a
+                    fixture type above in order to map the channels</p>
+
+                <div class="form-group"
+                     data-ng-repeat="channelType in newFixture.type.channels">
+
+                    <label for="exampleInputEmail1"
+                           class="col-sm-4 col-md-3  control-label" ng-bind-html="channelType.name"></label>
+
+                    <div class="col-sm-8 col-md-9">
+                        <input type="number" min="1" max="36"
+                               class="form-control"
+                               id="exampleInputEmail1">
+                    </div>
+
+
+                </div>
+
+            </fieldset>
+        </div>
+
+
+        <button type="submit" class="btn btn-default">Save New Fixture</button>
+    </form>
+</div>

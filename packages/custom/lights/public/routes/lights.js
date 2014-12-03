@@ -12,11 +12,18 @@ angular.module('mean.lights').config(['$stateProvider',
           url: '/lights'
       };
 
-      var lightsTanks = {
-          name: 'lights.tanks', //mandatory. This counter-intuitive requirement addressed in issue #368
+      var lightsFixtures = {
+          name: 'lights.fixtures', //mandatory. This counter-intuitive requirement addressed in issue #368
           parent: lights,  //mandatory
-          url: '/tanks',
-          templateUrl: 'arduino/views/arduino.history.html'
+          url: '/fixtures',
+          templateUrl: 'lights/views/lights.fixtures.html'
+      };
+
+      var newLightFixture = {
+          name: 'lights.fixtures.new', //mandatory. This counter-intuitive requirement addressed in issue #368
+          parent: lightsFixtures,  //mandatory
+          url: '/fixtures/new',
+          templateUrl: 'lights/views/lights.fixtures.new.html'
       };
 
       var lightsSchedule = {
@@ -42,7 +49,8 @@ angular.module('mean.lights').config(['$stateProvider',
 
       $stateProvider
           .state(lights)
-          .state(lightsTanks)
+          .state(lightsFixtures)
+          .state(newLightFixture)
           .state(lightsSchedule)
           .state(lightsDemo)
           .state(lightsSettings);
